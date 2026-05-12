@@ -1,0 +1,70 @@
+name: Patch Zenbones Mono with Nerd Font Patcher
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          sudo apt update -y
+          sudo apt install fontforge python3-fontforge jq -y
+
+      - name: Setup FontPatcher
+        run: |
+          wget -q -O FontPatcher.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FontPatcher.zip
+          unzip -q FontPatcher.zip -d FontPatcher
+          chmod +x FontPatcher/font-patcher
+
+      - name: Download latest Zenbones Mono font
+        run: |
+          wget -q -O Fonts.zip https://github.com/zenbones-theme/zenbones-mono/releases/latest/download/Zenbones-Mono-TTF.zip
+
+      - name: Extract fonts
+        run: |
+          mkdir -p fonts
+          unzip -q Fonts.zip -d fonts
+
+      - name: Patch fonts
+        run: |
+          shopt -s globstar
+          mkdir -p patched-fonts
+
+          for font in fonts/**/*.ttf ; do
+            echo "Patching $font"
+            fontforge  \
+              --script FontPatcher/font-patcher \
+              --complete \
+              --quiet \
+              --careful \
+              --name "Zenbones-MonoNF" \
+              "$font" \
+              -o ./patched-fonts
+          done
+          echo "All fonts patched successfully"
+
+      - name: Package fonts
+        run: |
+          zip -r -q Zenbones-MonoNF.zip ./patched-fonts/*.ttf
+
+      - name: Get Zenbones version
+        id: version
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/zenbones-theme/zenbones-mono/releases/latest | jq -r .tag_name)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using tag: $TAG"
+
+      - name: Create a release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Zenbones Mono Nerd Font ${{ steps.version.outputs.tag }}
+          files: Zenbones-MonoNF.zip
