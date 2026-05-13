@@ -36,7 +36,6 @@ jobs:
       - name: Patch fonts
         run: |
           shopt -s globstar
-          mkdir -p patched-fonts
 
           for font in fonts/**/*.ttf ; do
             echo "Patching $font"
@@ -48,15 +47,15 @@ jobs:
               --complete \
               --quiet \
               --careful \
-              --name "Zenbones-MonoNF" \
+              --name "$base-NF" \
               "$font" \
-              -o ./patched-fonts/${base}-NF.ttf
+              -o .
           done
           echo "All fonts patched successfully"
 
       - name: Package fonts
         run: |
-          zip -r -q Zenbones-Mono-NF.zip ./patched-fonts/*.ttf
+          zip -r -q Zenbones-Mono-NF.zip ./*.ttf
 
       - name: Get Zenbones version
         id: version
